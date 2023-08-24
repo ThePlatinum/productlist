@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 class ProductController extends Controller
 {
     public $STORAGE_LOCATION = './products.json';
+
     public $rules = [
         'name' => 'required|string|min:2',
         'quantity' => 'required|numeric',
@@ -34,7 +35,10 @@ class ProductController extends Controller
     {
         $validator = Validator::make($request->all(), $this->rules);
 
-        if ($validator->fails()) return $validator->errors()->first();
+        if ($validator->fails()) return [
+            'status' => false,
+            'message' => $validator->errors()->first()
+        ];
 
         $data = $this->index();
 
@@ -45,7 +49,12 @@ class ProductController extends Controller
 
         $data[] = array($request->except('_token'));
 
-        return $this->updateProduct($data);
+        $this->updateProduct($data);
+
+        return [
+            'status' => true,
+            'data' => $request->except('_token')
+        ];
     }
 
     /**
@@ -61,9 +70,6 @@ class ProductController extends Controller
         ];
 
         $data = $this->index();
-
-        $productIndex = array_search($request->id, array_column($data, 'id'));
-        if (!$productIndex) return "Product not found.";
 
         // TODO: Consider using array_map (if performance is better for large data)
         foreach ($data as $key => $product) {
@@ -98,11 +104,8 @@ class ProductController extends Controller
     {
         $data = $this->index();
 
-        $productIndex = array_search($id, array_column($data, 'id'));
-        if (!$productIndex) return "Product not found.";
-
         unset($data[$id]);
 
-        return $this->updateProduct($data);
+        return $this->updateProduct(array_values($data));
     }
 }
